@@ -1,8 +1,6 @@
 package config
 
 import (
-
-	// Deprecated, use os.ReadFile instead
 	"encoding/json"
 	"log"
 	"os"
