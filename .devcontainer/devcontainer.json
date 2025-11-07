@@ -1,0 +1,19 @@
+{
+  "name": "Gator Devcontainer",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [
+    5432
+  ],
+  "postCreateCommand": "cp .gatorconfig.json ~/.gatorconfig.json || true && sudo service postgresql start || true && sudo -u postgres psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\" || true && sudo -u postgres createdb -O postgres gator || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
