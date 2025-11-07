@@ -21,8 +21,13 @@ func (c *Commands) Register(name string, f func(*models.State, Command) error) {
 
 func (c *Commands) Run(s *models.State, cmd Command) error {
 	if s == nil {
-		return fmt.Errorf("Run: expected non nil state.")
+		return fmt.Errorf("Run: expected non-nil state")
 	}
 
-	return nil
+	handler, exists := c.handlers[cmd.Name]
+	if !exists {
+		return fmt.Errorf("command %q not registered", cmd.Name)
+	}
+
+	return handler(s, cmd)
 }

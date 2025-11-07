@@ -42,7 +42,7 @@ func main() {
 	cmds.Register("login", cli.HandlerLogin)
 
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: gator command <arguments>")
+		logger.Fatalf("Usage: gator command <arguments>")
 		return
 	}
 
@@ -51,6 +51,10 @@ func main() {
 		Args: os.Args[2:],
 	}
 	debugLog(logger, "create command successful. cmd = %s\n", stringObjectToJSON(cmd))
+	fmt.Printf("run command: %s, args: %s\n", cmd.Name, cmd.Args)
 
-	fmt.Printf("Running command: <%s>, args [%s]\n", cmd.Name, cmd.Args)
+	err = cmds.Run(s, cmd)
+	if err != nil {
+		logger.Fatalf("error running command: %v\n", err)
+	}
 }
