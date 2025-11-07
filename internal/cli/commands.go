@@ -1,6 +1,9 @@
 package cli
 
-import "gator/internal/models"
+import (
+	"fmt"
+	"gator/internal/models"
+)
 
 type Commands struct {
 	handlers map[string]func(*models.State, Command) error
@@ -17,5 +20,9 @@ func (c *Commands) Register(name string, f func(*models.State, Command) error) {
 }
 
 func (c *Commands) Run(s *models.State, cmd Command) error {
+	if s == nil {
+		return fmt.Errorf("Run: expected non nil state.")
+	}
+
 	return nil
 }

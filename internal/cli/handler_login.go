@@ -19,7 +19,7 @@ func HandlerLogin(s *models.State, cmd Command) error {
 	// Save the updated config
 	err := s.Config.SetUser(username)
 	if err != nil {
-		return fmt.Errorf("failed to set user: %w", err)
+		return fmt.Errorf("failed to set user: %v, error: %w", username, err)
 	}
 
 	fmt.Printf("User has been set to: %s\n", username)
