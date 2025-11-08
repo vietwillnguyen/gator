@@ -6,7 +6,7 @@
   "forwardPorts": [
     5432
   ],
-  "postCreateCommand": "cp .gatorconfig.json ~/.gatorconfig.json || true && sudo service postgresql start || true && sudo -u postgres psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\" || true && sudo -u postgres createdb -O postgres gator || true",
+  "postCreateCommand": "bash -c 'cp .gatorconfig.json ~/.gatorconfig.json 2>/dev/null || true; sudo service postgresql start && sleep 3 && sudo -u postgres psql -c \"ALTER USER postgres WITH PASSWORD '\"'\"'postgres'\"'\"';\" && sudo -u postgres psql -c \"ALTER USER postgres WITH SUPERUSER;\" && (sudo -u postgres createdb -O postgres gator 2>/dev/null || echo \"Database gator already exists\") && echo \"PostgreSQL setup complete!\"'",
   "customizations": {
     "vscode": {
       "extensions": [

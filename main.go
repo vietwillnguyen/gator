@@ -1,13 +1,20 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"gator/internal/cli"
 	"gator/internal/config"
+	"gator/internal/database"
 	"gator/internal/models"
 	"log"
 	"os"
+
+	// import the driver, but you don't use it directly anywhere in your
+	// code. The underscore tells Go that you're importing it for
+	// its side effects, not because you need to use it.
+	_ "github.com/lib/pq"
 )
 
 var debug bool
@@ -35,11 +42,18 @@ func main() {
 	}
 	debugLog(logger, "config read successful: %v\n", stringObjectToJSON(cfg))
 
-	s := &models.State{Config: &cfg}
+	// Open connection to the database
+	db, err := sql.Open("postgres", cfg.DbURL)
+	dbQueries := database.New(db)
+	s := &models.State{
+		Config: &cfg,
+		Db:     dbQueries,
+	}
 	debugLog(logger, "create state successful. s = %v\n", stringObjectToJSON(s))
 
 	cmds := cli.NewCommands()
 	cmds.Register("login", cli.HandlerLogin)
+	cmds.Register("register", cli.HandlerRegister)
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")

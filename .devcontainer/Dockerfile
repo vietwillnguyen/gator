@@ -10,7 +10,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     postgresql \
     postgresql-contrib \
+    sudo \
  && rm -rf /var/lib/apt/lists/*
+
+# Update Go to the latest version
+RUN GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | head -n1) && \
+    curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz" | tar -xz -C /usr/local && \
+    /usr/local/go/bin/go version
+
+# Give vscode user passwordless sudo for PostgreSQL commands
+RUN echo "vscode ALL=(postgres) NOPASSWD: /usr/bin/psql, /usr/bin/createdb, /usr/bin/dropdb, /usr/bin/pg_dump, /usr/bin/pg_restore" >> /etc/sudoers.d/vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD: /usr/sbin/service postgresql *" >> /etc/sudoers.d/vscode && \
+    chmod 0440 /etc/sudoers.d/vscode
 
 # Set up GOPATH/GOBIN and ensure the vscode user owns the directory
 ENV GOPATH=/home/vscode/go
