@@ -2,12 +2,12 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"gator/internal/cli"
 	"gator/internal/config"
 	"gator/internal/database"
 	"gator/internal/models"
+	"gator/internal/utils"
 	"log"
 	"os"
 
@@ -19,11 +19,6 @@ import (
 
 var debug bool
 
-func stringObjectToJSON(v any) string {
-	data, _ := json.MarshalIndent(v, "", "  ")
-	return string(data)
-}
-
 func debugLog(logger *log.Logger, format string, v ...any) {
 	if debug {
 		logger.Printf(format, v...)
@@ -31,8 +26,7 @@ func debugLog(logger *log.Logger, format string, v ...any) {
 }
 
 func main() {
-	// Enable debug logs if env var is set
-	debug = os.Getenv("GATOR_DEBUG") == "1"
+	debug = true
 
 	logger := log.New(os.Stderr, "gator: ", log.LstdFlags|log.Lshortfile)
 
@@ -40,16 +34,20 @@ func main() {
 	if err != nil {
 		logger.Fatalf("error occurred reading config: %v", err)
 	}
-	debugLog(logger, "config read successful: %v\n", stringObjectToJSON(cfg))
+	debugLog(logger, "config read successful: %v\n", utils.ToJSON(cfg))
 
 	// Open connection to the database
 	db, err := sql.Open("postgres", cfg.DbURL)
+	if err != nil {
+		logger.Fatalf("error opening database: %v", err)
+	}
+
 	dbQueries := database.New(db)
 	s := &models.State{
 		Config: &cfg,
 		Db:     dbQueries,
 	}
-	debugLog(logger, "create state successful. s = %v\n", stringObjectToJSON(s))
+	debugLog(logger, "create state successful. s = %v\n", utils.ToJSON(s))
 
 	cmds := cli.NewCommands()
 	cmds.Register("login", cli.HandlerLogin)
@@ -64,7 +62,7 @@ func main() {
 		Name: os.Args[1],
 		Args: os.Args[2:],
 	}
-	debugLog(logger, "create command successful. cmd = %s\n", stringObjectToJSON(cmd))
+	debugLog(logger, "create command successful. cmd = %s\n", utils.ToJSON(cmd))
 	fmt.Printf("run command: %s, args: %s\n", cmd.Name, cmd.Args)
 
 	err = cmds.Run(s, cmd)
