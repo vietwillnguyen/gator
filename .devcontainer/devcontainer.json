@@ -6,6 +6,10 @@
   "forwardPorts": [
     5432
   ],
+  "containerEnv": {
+    "GOOSE_DRIVER": "postgres",
+    "GOOSE_DBSTRING": "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable"
+  },
   "postCreateCommand": "bash .devcontainer/setup-db.sh",
   "postStartCommand": "bash .devcontainer/start-db.sh",
   "customizations": {

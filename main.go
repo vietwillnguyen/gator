@@ -55,6 +55,7 @@ func main() {
 	cmds.Register("reset", cli.HandlerReset)
 	cmds.Register("users", cli.HandlerUsers)
 	cmds.Register("agg", cli.HandlerAgg)
+	cmds.Register("addfeed", cli.HandlerAddFeed)
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")
