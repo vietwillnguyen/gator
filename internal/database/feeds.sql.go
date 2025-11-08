@@ -108,6 +108,55 @@ func (q *Queries) GetFeeds(ctx context.Context) ([]Feed, error) {
 	return items, nil
 }
 
+const getFeedsWithUsers = `-- name: GetFeedsWithUsers :many
+SELECT 
+    feeds.id, feeds.url, feeds.name, feeds.created_at, feeds.updated_at, feeds.user_id,
+    users.name AS user_name
+FROM feeds
+INNER JOIN users ON feeds.user_id = users.id
+`
+
+type GetFeedsWithUsersRow struct {
+	ID        uuid.UUID
+	Url       string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserID    uuid.UUID
+	UserName  string
+}
+
+func (q *Queries) GetFeedsWithUsers(ctx context.Context) ([]GetFeedsWithUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFeedsWithUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFeedsWithUsersRow
+	for rows.Next() {
+		var i GetFeedsWithUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Url,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UserID,
+			&i.UserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const resetFeeds = `-- name: ResetFeeds :execrows
 DELETE FROM feeds
 `

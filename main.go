@@ -26,7 +26,7 @@ func debugLog(logger *log.Logger, format string, v ...any) {
 }
 
 func main() {
-	debug = true
+	debug = false
 
 	logger := log.New(os.Stderr, "gator: ", log.LstdFlags|log.Lshortfile)
 
@@ -56,6 +56,7 @@ func main() {
 	cmds.Register("users", cli.HandlerUsers)
 	cmds.Register("agg", cli.HandlerAgg)
 	cmds.Register("addfeed", cli.HandlerAddFeed)
+	cmds.Register("feeds", cli.HandlerFeeds)
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")

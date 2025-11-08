@@ -13,9 +13,11 @@ func HandlerUsers(s *models.State, cmd Command) error {
 		return fmt.Errorf("error fetching users: %w", err)
 	}
 
-	if err != nil {
-		return fmt.Errorf("error occurred reading config: %v", err)
+	if len(users) == 0 {
+		fmt.Println("No feeds found")
+		return nil
 	}
+
 	for _, user := range users {
 		out := user.Name
 		if s.Config.CurrentUserName == user.Name {
