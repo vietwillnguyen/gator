@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"gator/internal/models"
 )
@@ -10,14 +12,20 @@ func HandlerLogin(s *models.State, cmd Command) error {
 	if len(cmd.Args) == 0 {
 		return fmt.Errorf("login command requires a username argument")
 	}
-
 	username := cmd.Args[0]
+	_, err := s.Db.GetUser(context.Background(), username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user '%s' does not exist", username)
+		}
+		return fmt.Errorf("error checking user: %w", err)
+	}
 
 	// Update the config with the new username
 	s.Config.CurrentUserName = username
 
 	// Save the updated config
-	err := s.Config.SetUser(username)
+	err = s.Config.SetUser(username)
 	if err != nil {
 		return fmt.Errorf("failed to set user: %v, error: %w", username, err)
 	}
