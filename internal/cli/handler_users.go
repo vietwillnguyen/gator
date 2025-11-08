@@ -14,7 +14,7 @@ func HandlerUsers(s *models.State, cmd Command) error {
 	}
 
 	if len(users) == 0 {
-		fmt.Println("No feeds found")
+		fmt.Println("No users found")
 		return nil
 	}
 

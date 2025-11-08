@@ -14,7 +14,7 @@ import (
 // HandlerRegister creates a user in the postgres db
 func HandlerRegister(s *models.State, cmd Command) error {
 	if len(cmd.Args) == 0 {
-		return fmt.Errorf("register command requires a username argument")
+		return fmt.Errorf("command usage: register <username>")
 	}
 	username := cmd.Args[0]
 	fmt.Printf("Register: register user: %s\n", username)

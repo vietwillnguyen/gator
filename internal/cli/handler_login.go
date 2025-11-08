@@ -10,7 +10,7 @@ import (
 // handlerLogin sets the current user in the config
 func HandlerLogin(s *models.State, cmd Command) error {
 	if len(cmd.Args) == 0 {
-		return fmt.Errorf("login command requires a username argument")
+		return fmt.Errorf("command usage: login <username>")
 	}
 	username := cmd.Args[0]
 	_, err := s.Db.GetUser(context.Background(), username)

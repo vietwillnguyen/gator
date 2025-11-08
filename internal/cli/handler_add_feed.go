@@ -14,7 +14,7 @@ import (
 // HandlerAddFeed creates a feed in the postgres db
 func HandlerAddFeed(s *models.State, cmd Command) error {
 	if len(cmd.Args) != 2 {
-		return fmt.Errorf("addFeed command usage: addFeed <name> <url>")
+		return fmt.Errorf("command usage: addfeed <username> <url>")
 	}
 
 	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
