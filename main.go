@@ -52,6 +52,8 @@ func main() {
 	cmds := cli.NewCommands()
 	cmds.Register("login", cli.HandlerLogin)
 	cmds.Register("register", cli.HandlerRegister)
+	cmds.Register("reset", cli.HandlerReset)
+	cmds.Register("users", cli.HandlerUsers)
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")
