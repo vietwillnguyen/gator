@@ -23,3 +23,15 @@ FROM inserted_feed_follow
 INNER JOIN feeds ON inserted_feed_follow.feed_id = feeds.id
 INNER JOIN users ON inserted_feed_follow.user_id = users.id;
 
+--  It should return all the feed follows for a given user, 
+--  and include the names of the feeds and user in the result
+
+-- name: GetFeedFollowsForUser :many
+SELECT 
+    *, 
+    feeds.name AS feed_name, 
+    users.name AS user_name
+FROM feed_follows 
+INNER JOIN users ON users.id = feed_follows.user_id
+INNER JOIN feeds ON feeds.id = feed_follows.feed_id
+WHERE feed_follows.user_id = $1;

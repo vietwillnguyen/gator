@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// HandlerRegister creates a user in the postgres db
+// HandlerRegister creates a user in the postgres db, additionally login
 func HandlerRegister(s *models.State, cmd Command) error {
 	if len(cmd.Args) == 0 {
 		return fmt.Errorf("command usage: register <username>")

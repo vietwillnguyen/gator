@@ -6,6 +6,7 @@ import (
 	"gator/internal/cli"
 	"gator/internal/config"
 	"gator/internal/database"
+	"gator/internal/middleware"
 	"gator/internal/models"
 	"gator/internal/utils"
 	"log"
@@ -55,9 +56,10 @@ func main() {
 	cmds.Register("reset", cli.HandlerReset)
 	cmds.Register("users", cli.HandlerUsers)
 	cmds.Register("agg", cli.HandlerAgg)
-	cmds.Register("addfeed", cli.HandlerAddFeed)
+	cmds.Register("addfeed", middleware.LoggedIn(cli.HandlerAddFeed))
 	cmds.Register("feeds", cli.HandlerFeeds)
-	cmds.Register("follow", cli.HandlerFollow)
+	cmds.Register("follow", middleware.LoggedIn(cli.HandlerFollow))
+	cmds.Register("following", middleware.LoggedIn(cli.HandlerFollowing))
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")

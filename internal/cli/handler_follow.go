@@ -13,16 +13,10 @@ import (
 
 // Have the current user follow a feed by url
 // additionally create the feed follow record.
-func HandlerFollow(s *models.State, cmd Command) error {
+func HandlerFollow(s *models.State, cmd Command, user database.User) error {
 	// Handle usage.
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("command usage: follow <url>")
-	}
-
-	// Get user
-	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error get user: %w", err)
 	}
 
 	url := cmd.Args[0]
