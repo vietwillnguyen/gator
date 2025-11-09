@@ -60,6 +60,7 @@ func main() {
 	cmds.Register("feeds", cli.HandlerFeeds)
 	cmds.Register("follow", middleware.LoggedIn(cli.HandlerFollow))
 	cmds.Register("following", middleware.LoggedIn(cli.HandlerFollowing))
+	cmds.Register("unfollow", middleware.LoggedIn(cli.HandlerUnfollow))
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")
