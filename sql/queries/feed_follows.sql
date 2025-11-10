@@ -3,7 +3,6 @@
 -- 3. AND the names of the linked user and feed.
 
 -- name: CreateFeedFollow :one
-
 WITH inserted_feed_follow AS (
     INSERT INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
     VALUES (
@@ -25,7 +24,6 @@ INNER JOIN users ON inserted_feed_follow.user_id = users.id;
 
 --  It should return all the feed follows for a given user, 
 --  and include the names of the feeds and user in the result
-
 -- name: GetFeedFollowsForUser :many
 SELECT 
     *, 
@@ -36,6 +34,8 @@ INNER JOIN users ON users.id = feed_follows.user_id
 INNER JOIN feeds ON feeds.id = feed_follows.feed_id
 WHERE feed_follows.user_id = $1;
 
+-- Delete a feed follow record by user and feed id combination.
 -- name: DeleteFeedFollowsForUser :execrows
 DELETE FROM feed_follows
 WHERE feed_follows.user_id = $1 AND feed_follows.feed_id = $2;
+

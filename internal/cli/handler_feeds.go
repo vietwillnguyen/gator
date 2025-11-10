@@ -25,6 +25,6 @@ func HandlerFeeds(s *models.State, cmd Command) error {
 		fmt.Printf("   Created by: %s\n", feed.UserName)
 		fmt.Println()
 	}
-
+	
 	return nil
 }

@@ -72,10 +72,13 @@ func main() {
 		Args: os.Args[2:],
 	}
 	debugLog(logger, "create command successful. cmd = %s\n", utils.ToJSON(cmd))
-	fmt.Printf("run command: %s, args: %s\n", cmd.Name, cmd.Args)
+	fmt.Printf("gator run command=%s, args=%s\n", cmd.Name, cmd.Args)
 
 	err = cmds.Run(s, cmd)
 	if err != nil {
-		logger.Fatalf("error running command: %v\n", err)
+		fmt.Printf("error running command: %v\n", err)
+		os.Exit(1)
 	}
+	fmt.Printf("command successfully run.\n")
+
 }

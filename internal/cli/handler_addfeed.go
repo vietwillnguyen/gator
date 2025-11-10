@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gator/internal/database"
 	"gator/internal/models"
-	"gator/internal/utils"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,7 +27,6 @@ func HandlerAddFeed(s *models.State, cmd Command, user database.User) error {
 		Url:       url,
 		UserID:    user.ID,
 	})
-	fmt.Printf("feed object created: %s", utils.ToJSON(feed))
 	if err != nil {
 		return fmt.Errorf("error creating feed: %w", err)
 	}

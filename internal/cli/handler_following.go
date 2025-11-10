@@ -16,7 +16,7 @@ func HandlerFollowing(s *models.State, cmd Command, user database.User) error {
 	}
 	// Handle none found
 	if len(feedFollows) == 0 {
-		fmt.Println("No feedFollows found")
+		fmt.Println("User not following any feeds")
 		return nil
 	}
 

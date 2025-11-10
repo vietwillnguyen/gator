@@ -4,14 +4,38 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"gator/internal/database"
 	"gator/internal/models"
-	"gator/internal/utils"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
-// func NewRequestWithContext(ctx context.Context, method, url string, body io.Reader) (*Request, error)
+func HandlerAgg(s *models.State, cmd Command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: agg <time_between_reqs>")
+	}
+
+	timeBetweenRequests, err := time.ParseDuration(cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("invalid duration %q: %w", cmd.Args[0], err)
+	}
+
+	fmt.Printf("Collecting feeds every %s\n", timeBetweenRequests)
+
+	ticker := time.NewTicker(timeBetweenRequests)
+	defer ticker.Stop()
+
+	// Run once immediately
+	scrapeFeeds(s)
+
+	for range ticker.C {
+		scrapeFeeds(s)
+	}
+
+	return nil
+}
 
 func fetchFeed(ctx context.Context, feedURL string) (*models.RSSFeed, error) {
 	// 1. Create request
@@ -20,7 +44,6 @@ func fetchFeed(ctx context.Context, feedURL string) (*models.RSSFeed, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	fmt.Printf("created request: %s", utils.ToJSON(req))
 
 	// 2. Create client
 	client := &http.Client{
@@ -55,11 +78,26 @@ func fetchFeed(ctx context.Context, feedURL string) (*models.RSSFeed, error) {
 	return &rssFeed, nil
 }
 
-func HandlerAgg(s *models.State, cmd Command) error {
-	rssFeed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+func scrapeFeeds(s *models.State) {
+	feedToFetch, err := s.Db.GetNextFeedToFetch(context.Background())
 	if err != nil {
-		return fmt.Errorf("error fetching feed: %w", err)
+		fmt.Fprintf(os.Stderr, "error getting feed: %v\n", err)
+		return
 	}
-	fmt.Printf("rssFeed: %s\n", utils.ToJSON(rssFeed))
-	return nil
+
+	if err := s.Db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
+		ID:        feedToFetch.ID,
+		UpdatedAt: time.Now(),
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "error marking feed: %v\n", err)
+		return
+	}
+
+	rssFeed, err := fetchFeed(context.Background(), feedToFetch.Url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error fetching %s: %v\n", feedToFetch.Url, err)
+		return
+	}
+
+	fmt.Printf("Fetched: %s at %v\n", rssFeed.Channel.Title, time.Now())
 }
