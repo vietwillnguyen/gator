@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gator/internal/database"
 	"gator/internal/models"
+	"gator/internal/rss"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,18 +13,25 @@ import (
 
 // HandlerAddFeed creates a feed in the postgres db
 func HandlerAddFeed(s *models.State, cmd Command, user database.User) error {
-	if len(cmd.Args) != 2 {
-		return fmt.Errorf("command usage: addfeed <username> <url>")
+	if len(cmd.Args) != 1 { // Only need URL now
+		return fmt.Errorf("command usage: addfeed <url>")
 	}
+	url := cmd.Args[0]
 
-	name := cmd.Args[0]
-	url := cmd.Args[1]
+	// Add timeout for feed fetching
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	rssFeed, err := rss.FetchFeed(ctx, url)
+	if err != nil {
+		return fmt.Errorf("error fetching feed: %w", err)
+	}
 
 	feed, err := s.Db.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		Name:      name,
+		Name:      rssFeed.Channel.Title, // Use actual feed name
 		Url:       url,
 		UserID:    user.ID,
 	})
@@ -42,5 +50,6 @@ func HandlerAddFeed(s *models.State, cmd Command, user database.User) error {
 		return fmt.Errorf("error creating feed follow: %w", err)
 	}
 
+	fmt.Printf("Added feed: %s\n", feed.Name)
 	return nil
 }

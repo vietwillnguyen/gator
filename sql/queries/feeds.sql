@@ -44,4 +44,4 @@ WHERE id = $3;
 -- name: GetNextFeedToFetch :one
 SELECT * 
 FROM feeds
-ORDER BY last_fetched_at DESC;
+ORDER BY last_fetched_at DESC NULLS FIRST;

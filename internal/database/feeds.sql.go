@@ -200,7 +200,7 @@ const getNextFeedToFetch = `-- name: GetNextFeedToFetch :one
 
 SELECT id, url, name, created_at, updated_at, user_id, last_fetched_at 
 FROM feeds
-ORDER BY last_fetched_at DESC
+ORDER BY last_fetched_at DESC NULLS FIRST
 `
 
 // Should return the next feed we should fetch posts from.

@@ -10,3 +10,9 @@ psql -h localhost -U postgres -d gator
 
 # Go connection string
 connStr := "host=localhost port=5432 user=postgres password=postgresddbname=gator sslmode=disable"
+
+# Safe URLS to scrape
+
+TechCrunch: https://techcrunch.com/feed/
+Hacker News: https://news.ycombinator.com/rss
+Boot.dev Blog: https://blog.boot.dev/index.xml

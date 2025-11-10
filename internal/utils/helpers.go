@@ -1,7 +1,9 @@
 // internal/utils/helpers.go
 package utils
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 func ToJSON(v any) string {
 	data, _ := json.MarshalIndent(v, "", "  ")

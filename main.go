@@ -61,6 +61,7 @@ func main() {
 	cmds.Register("follow", middleware.LoggedIn(cli.HandlerFollow))
 	cmds.Register("following", middleware.LoggedIn(cli.HandlerFollowing))
 	cmds.Register("unfollow", middleware.LoggedIn(cli.HandlerUnfollow))
+	cmds.Register("browse", middleware.LoggedIn(cli.HandlerBrowse))
 
 	if len(os.Args) < 2 {
 		logger.Fatalf("Usage: gator command <arguments>")
@@ -72,7 +73,7 @@ func main() {
 		Args: os.Args[2:],
 	}
 	debugLog(logger, "create command successful. cmd = %s\n", utils.ToJSON(cmd))
-	fmt.Printf("gator run command=%s, args=%s\n", cmd.Name, cmd.Args)
+	fmt.Printf("run command: '%s', args=%s\n", cmd.Name, cmd.Args)
 
 	err = cmds.Run(s, cmd)
 	if err != nil {

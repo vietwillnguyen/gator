@@ -2,14 +2,16 @@ package cli
 
 import (
 	"context"
-	"encoding/xml"
+	"database/sql"
 	"fmt"
 	"gator/internal/database"
 	"gator/internal/models"
-	"io"
-	"net/http"
+	"gator/internal/rss"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func HandlerAgg(s *models.State, cmd Command) error {
@@ -27,6 +29,8 @@ func HandlerAgg(s *models.State, cmd Command) error {
 	ticker := time.NewTicker(timeBetweenRequests)
 	defer ticker.Stop()
 
+	// Scrape feeds
+
 	// Run once immediately
 	scrapeFeeds(s)
 
@@ -35,47 +39,6 @@ func HandlerAgg(s *models.State, cmd Command) error {
 	}
 
 	return nil
-}
-
-func fetchFeed(ctx context.Context, feedURL string) (*models.RSSFeed, error) {
-	// 1. Create request
-	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
-	req.Header.Set("User-Agent", `gator`)
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
-	}
-
-	// 2. Create client
-	client := &http.Client{
-		Timeout: 10 * time.Second, // Good practice to set a timeout
-	}
-
-	// 3. Make request
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error executing request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// 4. Check status code
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	// 5. Read all data from response body
-	dataBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
-
-	// 6. Unmarshal XML into RSSFeed struct
-	var rssFeed models.RSSFeed
-	err = xml.Unmarshal(dataBytes, &rssFeed)
-	if err != nil {
-		return nil, fmt.Errorf("error parse XML: %w", err)
-	}
-
-	return &rssFeed, nil
 }
 
 func scrapeFeeds(s *models.State) {
@@ -93,11 +56,78 @@ func scrapeFeeds(s *models.State) {
 		return
 	}
 
-	rssFeed, err := fetchFeed(context.Background(), feedToFetch.Url)
+	RSSFeed, err := rss.FetchFeed(context.Background(), feedToFetch.Url)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error fetching %s: %v\n", feedToFetch.Url, err)
 		return
 	}
 
-	fmt.Printf("Fetched: %s at %v\n", rssFeed.Channel.Title, time.Now())
+	fmt.Printf("Fetched: %s at %v\n", RSSFeed.Channel.Title, time.Now())
+	fmt.Printf("Found %d posts(s)\n", len(RSSFeed.Channel.Items))
+	numPostsIgnored := 0
+	numPostsAdded := 0
+
+	for _, item := range RSSFeed.Channel.Items {
+
+		// if post already exists, ignore.
+		_, err := s.Db.GetPostByURL(context.Background(), item.Link)
+		if err != sql.ErrNoRows {
+			// fmt.Printf("Post '%s' already exists, ignoring\n", item.Title)
+			numPostsIgnored += 1
+			continue
+		}
+
+		// attempt parse on publish date
+		parsedPublishDate, err := parsePubDate(item.PublishedAt)
+		if err != nil {
+			// log and skip or fallback to time.Now()
+			fmt.Printf("Unable to parse publish date for post titled '%s', ignoring\n", item.Title)
+			continue
+		}
+
+		// save post to database
+		_, err = s.Db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Title:     item.Title,
+			Url:       item.Link,
+			Description: sql.NullString{
+				String: item.Description,
+				Valid:  item.Description != "", // store description if it is not empty
+			},
+			PublishedAt: sql.NullTime{
+				Time:  parsedPublishDate,
+				Valid: true, // always store publish date
+			},
+			FeedID: feedToFetch.ID,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error creating post: %v\n", err)
+			continue
+		}
+		numPostsAdded += 1
+	}
+	fmt.Printf("New Posts Added: %d, Posts Ignored: %d\n", numPostsAdded, numPostsIgnored)
+}
+
+var timeLayouts = []string{
+	time.RFC1123Z,                         // "Mon, 02 Jan 2006 15:04:05 -0700"
+	time.RFC1123,                          // "Mon, 02 Jan 2006 15:04:05 MST"
+	time.RFC822Z,                          // "02 Jan 06 15:04 -0700"
+	time.RFC822,                           // "02 Jan 06 15:04 MST"
+	time.RFC850,                           // "Monday, 02-Jan-06 15:04:05 MST"
+	time.RFC3339,                          // ISO 8601
+	"Mon, 02 Jan 2006 15:04:05 -0700 MST", // some feeds include both
+}
+
+func parsePubDate(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	for _, layout := range timeLayouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	// optional: attempt common cleanup (remove commas, collapse spaces, etc.) then retry
+	return time.Time{}, fmt.Errorf("unrecognized pubDate format: %q", s)
 }

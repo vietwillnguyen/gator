@@ -5,6 +5,11 @@ import (
 	"gator/internal/models"
 )
 
+type Command struct {
+	Name string
+	Args []string
+}
+
 type Commands struct {
 	handlers map[string]func(*models.State, Command) error
 }
