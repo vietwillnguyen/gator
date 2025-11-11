@@ -1,25 +1,335 @@
-# Connect as postgres user (no password needed with sudo)
-sudo -u postgres psql
+# Gator
 
-# Connect to your gator database
-sudo -u postgres psql -d gator
+A command-line RSS feed aggregator written in Go. Gator allows you to follow RSS feeds, aggregate posts, and browse them directly from your terminal.
 
-# Or from your Go application
-psql -h localhost -U postgres -d gator
-# When prompted, enter: postgres
+## Features
 
-# Go connection string
-connStr := "host=localhost port=5432 user=postgres password=postgresddbname=gator sslmode=disable"
+- 📰 **RSS Feed Management** - Add, follow, and unfollow RSS feeds
+- 👤 **Multi-user Support** - Multiple users can manage their own feed subscriptions
+- 🔄 **Automatic Aggregation** - Fetch and store posts from followed feeds
+- 📖 **Browse Posts** - Read aggregated posts directly in the terminal
+- 🗄️ **PostgreSQL Backend** - Reliable data persistence with proper schema migrations
 
-# Example URLS to scrape
+## Prerequisites
 
-TechCrunch: https://techcrunch.com/feed/
-Hacker News: https://news.ycombinator.com/rss
-Boot.dev Blog: https://blog.boot.dev/index.xml
+- Go 1.21 or higher
+- PostgreSQL 12 or higher
+- [goose](https://github.com/pressly/goose) (for database migrations)
+- [sqlc](https://sqlc.dev/) (for generating type-safe SQL code)
 
+## Installation
 
-# TODO
-- Add Help command / display
-- Add / Cleanup Documentation
-- Write Tests
-- CI/CD
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/gator.git
+cd gator
+```
+
+### 2. Set up PostgreSQL
+
+```bash
+# Start PostgreSQL
+sudo service postgresql start
+
+# Create the database
+sudo -u postgres createdb -O postgres gator
+
+# Set password for postgres user
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+```
+
+### 3. Run database migrations
+
+```bash
+cd sql/schema
+goose postgres "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable" up
+cd ../..
+```
+
+### 4. Build the application
+
+```bash
+go build -o gator
+```
+
+### 5. Create config file
+
+The application will automatically create `~/.gatorconfig.json` on first run, or you can create it manually:
+
+```json
+{
+  "db_url": "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable",
+  "current_user_name": ""
+}
+```
+
+## Usage
+
+### User Management
+
+```bash
+# Register a new user
+./gator register <username>
+
+# Login as a user
+./gator login <username>
+
+# List all users
+./gator users
+
+# Reset all users (WARNING: deletes all data)
+./gator reset
+```
+
+### Feed Management
+
+```bash
+# Add a new feed
+./gator addfeed <feed_name> <feed_url>
+
+# List all feeds in the system
+./gator feeds
+
+# Follow a feed (must be logged in)
+./gator follow <feed_url>
+
+# Unfollow a feed (must be logged in)
+./gator unfollow <feed_url>
+
+# List feeds you're following
+./gator following
+```
+
+### Reading Posts
+
+```bash
+# Aggregate posts from followed feeds
+./gator agg <time_between_requests>
+# Example: ./gator agg 1m (fetch every 1 minute)
+# Example: ./gator agg 30s (fetch every 30 seconds)
+
+# Browse recent posts from followed feeds
+./gator browse [limit]
+# Example: ./gator browse 10 (show 10 most recent posts)
+```
+
+### Example Workflow
+
+```bash
+# 1. Register and login
+./gator register alice
+./gator login alice
+
+# 2. Add and follow some feeds
+./gator addfeed "TechCrunch" https://techcrunch.com/feed/
+./gator addfeed "Hacker News" https://news.ycombinator.com/rss
+./gator follow https://techcrunch.com/feed/
+./gator follow https://news.ycombinator.com/rss
+
+# 3. Start aggregating posts (in background or separate terminal)
+./gator agg 5m
+
+# 4. Browse your feed
+./gator browse 20
+```
+
+## Project Structure
+
+```
+gator/
+├── main.go                      # Application entry point
+├── internal/
+│   ├── cli/                     # Command handlers
+│   │   ├── commands.go          # Command registration system
+│   │   └── handler_*.go         # Individual command implementations
+│   ├── config/                  # Configuration management
+│   ├── database/                # Generated database code (sqlc)
+│   ├── middleware/              # Authentication middleware
+│   ├── models/                  # Data models (State, RSS structs)
+│   ├── rss/                     # RSS feed fetching and parsing
+│   └── utils/                   # Utility functions
+├── sql/
+│   ├── queries/                 # SQL query definitions (for sqlc)
+│   └── schema/                  # Database migrations (goose)
+└── sqlc.yaml                    # sqlc configuration
+```
+
+## Architecture
+
+### Command System
+
+Gator uses a flexible command registration system that allows easy addition of new commands:
+
+```go
+// Standard command handler
+func HandlerExample(s *models.State, cmd Command) error {
+    // Handle command
+}
+
+// Logged-in command handler (requires authentication)
+func HandlerProtected(s *models.State, cmd Command, user database.User) error {
+    // Handle command with authenticated user
+}
+
+// Registration
+cmds.Register("example", HandlerExample)
+cmds.Register("protected", middleware.LoggedIn(HandlerProtected))
+```
+
+### Database Layer
+
+- **sqlc** generates type-safe Go code from SQL queries
+- **goose** manages database migrations
+- All database queries are defined in `sql/queries/*.sql`
+- Schema migrations are in `sql/schema/*.sql`
+
+### State Management
+
+The `State` struct is passed to all command handlers and contains:
+- `Config`: User configuration (current user, DB connection string)
+- `Db`: Database query interface (generated by sqlc)
+
+## Development
+
+### Adding a New Command
+
+1. Create handler in `internal/cli/handler_newcommand.go`:
+```go
+func HandlerNewCommand(s *models.State, cmd Command) error {
+    // Implementation
+}
+```
+
+2. Register in `main.go`:
+```go
+cmds.Register("newcommand", cli.HandlerNewCommand)
+```
+
+### Adding a New Database Query
+
+1. Write SQL in `sql/queries/*.sql`:
+```sql
+-- name: GetSomething :one
+SELECT * FROM table WHERE id = $1;
+```
+
+2. Regenerate code:
+```bash
+sqlc generate
+```
+
+3. Use in handler:
+```go
+result, err := s.Db.GetSomething(ctx, id)
+```
+
+### Adding a Database Migration
+
+1. Create migration:
+```bash
+cd sql/schema
+goose create my_migration sql
+```
+
+2. Edit the generated file with Up/Down migrations
+
+3. Apply migration:
+```bash
+goose postgres "postgres://..." up
+```
+
+## Environment Variables
+
+- `GATOR_DEBUG`: Set to `1` to enable debug logging
+- `GOOSE_DRIVER`: Database driver for goose (default: `postgres`)
+- `GOOSE_DBSTRING`: Database connection string for goose
+
+## Popular RSS Feeds to Try
+
+- **Tech News**
+  - TechCrunch: https://techcrunch.com/feed/
+  - Hacker News: https://news.ycombinator.com/rss
+  - The Verge: https://www.theverge.com/rss/index.xml
+
+- **Development**
+  - Boot.dev Blog: https://blog.boot.dev/index.xml
+  - Go Weekly: https://golangweekly.com/rss
+  - DEV Community: https://dev.to/feed
+
+- **General News**
+  - BBC News: http://feeds.bbci.co.uk/news/rss.xml
+  - NPR: https://feeds.npr.org/1001/rss.xml
+
+## Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run specific package tests
+go test ./internal/cli/...
+```
+
+## Troubleshooting
+
+### "connection refused" error
+
+PostgreSQL isn't running. Start it:
+```bash
+sudo service postgresql start
+```
+
+### "user not logged in" error
+
+You need to login first:
+```bash
+./gator login <username>
+```
+
+### "feed already exists" error
+
+The feed URL is already in the system. You can follow it instead:
+```bash
+./gator follow <feed_url>
+```
+
+## TODO
+
+- [ ] Add help command with detailed usage information
+- [ ] Implement comprehensive test suite
+- [ ] Add CI/CD pipeline
+- [ ] Support for Atom feeds (currently RSS only)
+- [ ] Web interface for browsing feeds
+- [ ] Export/import feed subscriptions (OPML format)
+- [ ] Search functionality for posts
+- [ ] Tag/category support for feeds
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Built as part of the [Boot.dev](https://boot.dev) curriculum
+- Uses [goose](https://github.com/pressly/goose) for migrations
+- Uses [sqlc](https://sqlc.dev/) for type-safe SQL
+- RSS parsing inspired by the Go standard library
+
+## Contact
+
+Viet Nguyen - [@Viet Nguyen](https://vietwillnguyen.github.io/contact/)
+
